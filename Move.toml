@@ -1,0 +1,12 @@
+[package]
+name = "chat-edu-contracts"
+version = "1.0.0"
+authors = []
+
+[addresses]
+chat_edu = "0xcaf116e353a28628dfb6db75acba9e28ac1b42459766c1dc89f22fc621361004"
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-core.git"
+rev = "randomnet"
+subdir = "aptos-move/framework/aptos-framework"
