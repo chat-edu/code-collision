@@ -23,19 +23,7 @@ module chat_edu::course {
         mapping: SimpleMap<String, address>
     }
 
-    struct Course has key {
-        id: String,
-        owner: address,
-        users: SmartVector<address>,
-        credits: Coin<Credits>
-    }
     
-    
-    
-    struct StudySet has store {
-        id: String,
-        owner: address,
-    }
     
     // error codes
     
@@ -60,6 +48,13 @@ module chat_edu::course {
         move_to(chat_edu, Courses { 
             mapping: simple_map::new() 
         });
+    }
+
+    struct Course has key {
+        id: String,
+        owner: address,
+        users: SmartVector<address>,
+        credits: Coin<Credits>
     }
     
     public entry fun create_course(account: &signer, id: String) acquires Courses, Course {
@@ -145,7 +140,7 @@ module chat_edu::course {
     public entry fun create_video(
         account: &signer,
         course_id: String,
-        study_set_id: String,
+        video_id: String,
         file_id: String
     ) 
     acquires Courses {
@@ -156,7 +151,7 @@ module chat_edu::course {
         let credits = coin::withdraw<Credits>(account, VIDEO_COST);
         credits::burn(coin::extract<Credits>(&mut credits, VIDEO_COST / 2));
         file::add_credits(*course_address, file_id, credits);
-        video::add_video(*course_address, study_set_id, signer::address_of(account), file_id);
+        video::add_video(*course_address, video_id, signer::address_of(account), file_id);
     }
     
     public entry fun prompt_chatbot(account: &signer, course_id: String) acquires Courses, Course {
@@ -171,7 +166,7 @@ module chat_edu::course {
         coin::merge(&mut course.credits, credits);
     }
     
-    public entry fun claim_credits(account: &signer, course_id: String) acquires Courses {
+    public entry fun claim_credits(account: &signer, course_id: String) acquires Courses, Course {
         assert_module_initialized();
         let courses = borrow_global<Courses>(@chat_edu);
         assert_course_created(courses, &course_id);
@@ -185,6 +180,10 @@ module chat_edu::course {
         
         let video_credits = video::withdraw_all_credits(signer::address_of(account), *course_address);
         coin::deposit(signer::address_of(account), video_credits);
+        
+        let course = borrow_global_mut<Course>(*course_address);
+        let credits = coin::extract_all(&mut course.credits);
+        coin::deposit(signer::address_of(account), credits);
     }
     
     // getter functions
@@ -194,6 +193,15 @@ module chat_edu::course {
         let courses = borrow_global<Courses>(@chat_edu);
         assert_course_created(courses, &course_id);
         *simple_map::borrow(&courses.mapping, &course_id)
+    }
+    
+    #[view]
+    public fun get_course_credits(course_id: String): u64 acquires Courses, Course {
+        let courses = borrow_global<Courses>(@chat_edu);
+        assert_course_created(courses, &course_id);
+        let course_address = simple_map::borrow(&courses.mapping, &course_id);
+        let course = borrow_global<Course>(*course_address);
+        coin::value(&course.credits)
     }
     
     #[view]
